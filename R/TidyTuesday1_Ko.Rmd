@@ -1,0 +1,60 @@
+---
+title: "TidyTuesday1"
+author: "Evan Ko"
+date: "10/12/2020"
+output: html_document
+---
+
+```{r, include = FALSE, warning=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+```
+
+```{r read_data, include=FALSE}
+
+#read in data
+raw_df <- read_csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/ncaa-womens-basketball-tournament/ncaa-womens-basketball-tournament-history.csv")
+
+#run cleaning script
+clean_tourn <- raw_df %>% 
+  janitor::clean_names() %>% 
+  mutate(across(c(seed, conf_w:conf_percent, full_percent), parse_number))
+
+#add calculation column on winning record group
+clean_tourn$win_record <- ifelse(clean_tourn$reg_percent <= 50, '< 50%', '50% >')
+#view data coluumns
+vtable::vtable(clean_tourn)
+
+```
+
+# Visualization 1  
+Story: Teams with a losing regular season percentage do not win in the tournament  
+![plan 1](vis1.jpeg)
+
+```{r, warning=FALSE}
+clean_tourn_group <- clean_tourn %>% group_by(win_record) %>% summarize(Freq=n()) %>%arrange((Freq) ) 
+ggplot(clean_tourn_group, aes(x = win_record, y = Freq, fill = win_record),label = Frequency) + 
+  geom_bar(position = 'dodge', stat='identity', show.legend = FALSE) +
+     geom_text(aes(label=Freq), position=position_dodge(width=0.9), vjust=-0.25) +
+  labs(x = 'Regular Season Win Percetage', y = 'Count', title = 'How often a losing regular season team wins a tournament game')
+
+```
+
+# Visualization 2  
+Story: The lowest seed to reach the sweet 16 is 13  
+![plan 2](vis2.jpeg)
+
+
+```{r, warning=FALSE}
+clean_tourn_group2 <- clean_tourn %>% filter(tourney_finish %in% c('RSF','RF','NSF','N2nd', 'Champ')) %>% group_by(seed) %>% summarize(Freq=n()) %>%arrange((Freq) ) 
+
+low_seed <- max(clean_tourn_group2$seed)
+
+ggplot(clean_tourn_group2, aes(x = seed, y = Freq,fill=factor(ifelse(seed==low_seed,"Highlighted","Normal"))),label = Frequency) + 
+  scale_fill_manual(name = "seed", values=c("red","grey50")) +
+  geom_bar(position = 'dodge', stat='identity',show.legend = FALSE) +
+  labs(x = 'Seed', y = 'Count', title = 'Lowest Seed to reach Sweet 16') +
+  scale_x_continuous(breaks = seq(1, 16, by = 3))
+```
+

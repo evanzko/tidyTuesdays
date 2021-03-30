@@ -1,0 +1,114 @@
+---
+title: "Tidy Tuesday 2"
+author: "Evan Ko"
+date: "10/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(tidytext)
+library(zoo)
+```
+
+```{r, include = FALSE}
+# Get the Data
+
+# Read in with tidytuesdayR package
+# Install from CRAN via: install.packages("tidytuesdayR")
+# This loads the readme and all the datasets for the week of interest
+
+# Either ISO-8601 date or year/week works!
+
+# tuesdata <- tidytuesdayR::tt_load('2020-09-29')
+# tuesdata <- tidytuesdayR::tt_load(2020, week = 40)
+# 
+# beyonce_lyrics <- tuesdata$beyonce_lyrics
+
+# Or read in the data manually
+
+beyonce_lyrics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-29/beyonce_lyrics.csv')
+taylor_swift_lyrics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-29/taylor_swift_lyrics.csv')
+sales <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-29/sales.csv')
+charts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-29/charts.csv')
+
+```
+
+## Scatter Graph  
+### Story  
+I wanted to show the relationship between number of number of distinct media types and the world wide rankings (note rank 1 is the best).  
+
+### Plan  
+![plan 1](line.jpeg)  
+
+### GGPlot  
+
+```{r linePlot, echo=FALSE, warning=FALSE,message=FALSE,error=FALSE}
+chart_group <- charts %>%
+  # We want one row per song, so we group by song with a plan to summarize
+  group_by(title) %>%
+  # We want to paste() together each row's lyric chunks
+  # We can take that vector of lyrics and collapse them together into one string
+  # with a space (' ') between each
+  summarize(formatType = strsplit(formats,","))
+
+kl <- chart_group %>%
+  group_by(title) %>%
+  mutate(Distinct = lengths(formatType)) %>%
+  select (-c(formatType)) %>%
+  arrange(-Distinct)
+kp <- kl %>% 
+  group_by(title) %>%
+  summarise(DistinctCount = mean(Distinct))
+
+jCharts <- inner_join(x = charts, y = kp, by = 'title')
+jCharts$chart_position <- as.numeric(jCharts$chart_position)
+jCharts$global <- ifelse(jCharts$chart == "US","US","Global")
+
+ggplot(data = jCharts, aes(x = DistinctCount, y = chart_position)) +
+  stat_summary(fun = mean, geom="point") +
+  labs(x = 'Number of Distinct Media Types', y = 'Average Chart Rankings', title = 'Negative coorlation between ranking and Number of Distinct Media Types') +
+  geom_smooth(method='lm', formula= y~x)+
+  scale_y_reverse(breaks = 1:32)
+```
+
+## LineGraph  
+### Story  
+I wanted to which of the artist had sold more sales through the years. 
+
+### Plan  
+![plan 1](scatter.jpeg)  
+
+### GGPlot  
+
+
+```{r fig1, out.width = "80%", fig.align='center',echo=FALSE, warning=FALSE,message=FALSE,error=FALSE}
+#add month-year data column
+sales$rel_date <- str_replace(sales$released, "^(.+ .+ .+) (.+)$", "\\1")
+sales$rel_date <- as.Date(sales$rel_date, "%B %d,%Y") 
+sales$Month_Yr_rel <- format(as.Date(sales$rel_date), "%m/%Y")
+sales$Year <- format(as.Date(sales$rel_date), "%Y")
+sales$q_yr <- as.yearqtr(sales$rel_date, format = "%Y-%m-%d")
+sales_group <- sales %>% group_by(artist,Year) %>% summarize(total=sum(sales))
+sales_group <- drop_na(sales_group)
+sales_group$per10000 <- sales_group$total/10000
+sales_group$fCategory <- factor(sales_group$artist)
+
+beyonce_sales <- sales_group %>% filter(artist == "Beyoncé")
+taylor_sales <- sales_group %>% filter(artist == "Taylor Swift")
+beyonce_sales <- subset(sales_group, artist == "Beyoncé")
+taylor_sales <- subset(sales_group, artist == "Taylor Swift")
+
+ggplot(data = sales_group, aes(x = Year, y = per10000, color= artist)) +
+  geom_line(aes(group = artist)) +
+  labs(x = 'Date of Release', y = 'Total Sales (per 10,000)', title = 'Taylor Swift has been more popular through the year') +
+  geom_hline(yintercept = mean(beyonce_sales$per10000), color="blue",linetype='dotted') +
+  geom_hline(yintercept = mean(taylor_sales$per10000), color="red",linetype='dotted') +
+  scale_color_manual(values=c("blue", "red"))
+```
+
+
+
