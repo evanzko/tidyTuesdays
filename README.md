@@ -3,4 +3,4 @@
 </h1>
 
 
-These are my submissions to the TidyTuesday weekly challenges. A weekly data project aimed at the R ecosystem focusing on understanding how to summarize and arrange data to make meaningful charts with ggplot2, tidyr, dplyr, and other tools in the tidyverse ecosystem.
+These are my submissions to the TidyTuesday weekly challenges. A weekly data project aimed at the R ecosystem focusing on understanding how to summarize and arrange data to make meaningful charts with ggplot2, tidyr, dplyr, and other tools in the tidyverse ecosystem. I started learning R visualization in 2020 and this is my progress. 
